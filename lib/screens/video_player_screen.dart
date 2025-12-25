@@ -158,7 +158,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   final track = tracks[index];
                   return ListTile(
                     title: Text(
-                        track.title ?? track.language ?? 'Track ${index}',
+                        track.title ?? track.language ?? 'Track $index',
                         style: TextStyle(color: Colors.white)),
                     leading: track == current
                         ? Icon(Icons.check, color: Colors.orange)

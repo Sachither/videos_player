@@ -13,6 +13,7 @@ import path_provider_foundation
 import photo_manager
 import screen_brightness_macos
 import shared_preferences_foundation
+import volume_controller
 import wakelock_plus
 import webview_flutter_wkwebview
 
@@ -25,6 +26,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   PhotoManagerPlugin.register(with: registry.registrar(forPlugin: "PhotoManagerPlugin"))
   ScreenBrightnessMacosPlugin.register(with: registry.registrar(forPlugin: "ScreenBrightnessMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
+  VolumeControllerPlugin.register(with: registry.registrar(forPlugin: "VolumeControllerPlugin"))
   WakelockPlusMacosPlugin.register(with: registry.registrar(forPlugin: "WakelockPlusMacosPlugin"))
   WebViewFlutterPlugin.register(with: registry.registrar(forPlugin: "WebViewFlutterPlugin"))
 }

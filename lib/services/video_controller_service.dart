@@ -46,8 +46,9 @@ class VideoControllerService {
     if (_playlist.isEmpty || _currentIndex == -1) return;
 
     int nextIndex = _currentIndex + 1;
-    if (nextIndex >= _playlist.length)
+    if (nextIndex >= _playlist.length) {
       nextIndex = 0; // Loop or stop? Let's loop for now
+    }
 
     final nextFile = _playlist[nextIndex] as File;
     _currentIndex = nextIndex;
