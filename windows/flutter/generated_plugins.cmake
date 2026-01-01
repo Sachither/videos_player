@@ -3,10 +3,14 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  firebase_auth
+  firebase_core
   flutter_volume_controller
   media_kit_video
   permission_handler_windows
   screen_brightness_windows
+  share_plus
+  url_launcher_windows
   volume_controller
 )
 

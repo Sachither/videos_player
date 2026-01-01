@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path/path.dart' as path;
-import 'package:collection/collection.dart';
+// import 'package:collection/collection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class VideoControllerService {
   late final Player player;
@@ -20,7 +23,42 @@ class VideoControllerService {
   Future<void> initialize(File file) async {
     _currentFile = file;
     await _loadPlaylist(file.parent.path);
-    await player.open(Media(file.path));
+
+    // Open with play: false to allow seeking before start
+    await player.open(Media(file.path), play: false);
+
+    // Initial seek will now be handled by the UI layer to ensure metadata is ready
+  }
+
+  Future<Duration?> getSavedPosition(String filePath) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'resume_${base64Url.encode(utf8.encode(filePath))}';
+    final ms = prefs.getInt(key);
+    if (ms != null) {
+      return Duration(milliseconds: ms);
+    }
+    return null;
+  }
+
+  Future<void> savePosition(String filePath, Duration position) async {
+    // Don't save if position is essentially zero (unless starting fresh)
+    if (position.inSeconds < 1) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final duration = player.state.duration;
+
+    // Use full base64 of path to ensure absolute uniqueness
+    final key = 'resume_${base64Url.encode(utf8.encode(filePath))}';
+
+    if (duration.inSeconds > 0 &&
+        position.inSeconds > duration.inSeconds - 15) {
+      // Near end, clear it
+      await prefs.remove(key);
+      debugPrint('Cleared position for $filePath (near end)');
+    } else {
+      await prefs.setInt(key, position.inMilliseconds);
+      // debugPrint('Saved position for ${path.basename(filePath)}: ${position.inSeconds}s');
+    }
   }
 
   Future<void> _loadPlaylist(String directoryPath) async {

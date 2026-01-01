@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   flutter_volume_controller
   media_kit_video
+  url_launcher_linux
   volume_controller
 )
 

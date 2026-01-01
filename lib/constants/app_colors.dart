@@ -20,6 +20,12 @@ class AppColors {
   static const Color chatBubbleDark = Color(0xFF333215);
   static const Color accentYellow = Color(0xFFFFD700);
 
+  // New design colors
+  static const Color cardLight = Colors.white;
+  static const Color cardDark = Color(0xFF2C2B15);
+  static const Color surfaceLight = Color(0xFFF5F5F0);
+  static const Color surfaceDark = Color(0xFF3A3920);
+
   // Hover states
   static const Color primaryHover = Color(0xFFE6E205);
 

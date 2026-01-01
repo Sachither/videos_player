@@ -5,8 +5,11 @@ import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   MediaKit.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final bool isOnboardingComplete =

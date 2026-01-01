@@ -9,6 +9,7 @@ import 'package:screen_brightness/screen_brightness.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as path;
+import 'package:file_picker/file_picker.dart';
 import '../services/video_controller_service.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -25,12 +26,15 @@ class VideoPlayerScreen extends StatefulWidget {
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+class _VideoPlayerScreenState extends State<VideoPlayerScreen>
+    with WidgetsBindingObserver {
   late VideoControllerService _videoService;
 
   bool _showControls = true;
   Timer? _hideControlsTimer;
   bool _isLocked = false;
+  bool _isOrientationLocked = false;
+  BoxFit _videoFit = BoxFit.contain;
 
   // Volume & Brightness
   double _volume = 0.5;
@@ -38,6 +42,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isDragging = false;
   String? _dragLabel; // "Volume" or "Brightness"
   double? _dragValue; // current value being changed
+
+  // Resume state
+  bool _showResumeToast = false;
+  Duration? _resumedPosition;
+
+  Timer? _saveTimer;
 
   // State for UI updates
   Duration _position = Duration.zero;
@@ -53,23 +63,56 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     _videoService = VideoControllerService();
+
+    // Sync initial state if available
+    _position = _videoService.player.state.position;
+    _duration = _videoService.player.state.duration;
+
     _initPlayer();
     _initSettings();
+    _startSaveTimer();
+  }
+
+  void _startSaveTimer() {
+    _saveTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _saveCurrentPosition();
+    });
+  }
+
+  void _saveCurrentPosition() {
+    if (_videoService.currentFile != null) {
+      final pos = _videoService.player.state.position;
+      if (pos.inSeconds > 0) {
+        _videoService.savePosition(_videoService.currentFile!.path, pos);
+      }
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _saveCurrentPosition();
+    }
   }
 
   Future<void> _initPlayer() async {
-    await _videoService.initialize(widget.videoFile);
-
-    // Subscribe to streams
+    // 1. Subscribe to streams FIRST to catch all events
     _positionSub = _videoService.player.stream.position.listen((pos) {
-      setState(() => _position = pos);
+      if (mounted) setState(() => _position = pos);
     });
     _durationSub = _videoService.player.stream.duration.listen((dur) {
-      if (mounted) setState(() => _duration = dur);
+      if (mounted) {
+        setState(() => _duration = dur);
+        // Handle trigger for resume once duration is known
+        if (dur.inSeconds > 0 && _resumedPosition != null) {
+          _performResumeSeek();
+        }
+      }
     });
     _playingSub = _videoService.player.stream.playing.listen((playing) {
       if (mounted) setState(() => _isPlaying = playing);
@@ -79,10 +122,48 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       if (mounted) setState(() => _isBuffering = buffering);
     });
 
-    if (mounted) setState(() {});
+    // 2. Load resume position from local storage
+    final savedPos =
+        await _videoService.getSavedPosition(widget.videoFile.path);
+    if (savedPos != null && savedPos.inSeconds > 2) {
+      _resumedPosition = savedPos;
+      if (mounted) {
+        setState(() => _showResumeToast = true);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => _showResumeToast = false);
+        });
+      }
+    }
 
-    // Auto play
-    _videoService.player.play();
+    // 3. Initialize player (this triggers open)
+    await _videoService.initialize(widget.videoFile);
+
+    if (mounted) {
+      setState(() {
+        _position = _videoService.player.state.position;
+        _duration = _videoService.player.state.duration;
+      });
+    }
+
+    // 4. Fallback: if duration is already set or doesn't update,
+    // attempt seek after a delay anyway.
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted && _resumedPosition != null) {
+        _performResumeSeek(force: true);
+      }
+      if (mounted) _videoService.player.play();
+    });
+  }
+
+  bool _hasResumedAlready = false;
+  void _performResumeSeek({bool force = false}) {
+    if (_hasResumedAlready && !force) return;
+    if (_resumedPosition == null) return;
+
+    _hasResumedAlready = true;
+    _videoService.player.seek(_resumedPosition!);
+    debugPrint(
+        'Performing resume seek to ${_resumedPosition!.inSeconds}s (force: $force)');
   }
 
   Future<void> _initSettings() async {
@@ -95,8 +176,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    _saveTimer?.cancel();
+    _saveCurrentPosition();
+
     _videoService.dispose();
     _hideControlsTimer?.cancel();
     _positionSub.cancel();
@@ -144,6 +230,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   // --- Subtitles ---
+  Future<void> _loadExternalSubtitle() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['srt', 'vtt'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      // Actually media_kit uses specific track for external subs:
+      await _videoService.player.setSubtitleTrack(SubtitleTrack.uri(path));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subtitle loaded')),
+        );
+      }
+    }
+  }
+
   void _showSubtitleDialog() {
     showModalBottomSheet(
         context: context,
@@ -152,25 +256,224 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           final current = _videoService.player.state.track.subtitle;
           return Container(
             color: Colors.grey[900],
-            child: ListView.builder(
-                itemCount: tracks.length,
-                itemBuilder: (context, index) {
-                  final track = tracks[index];
-                  return ListTile(
-                    title: Text(
-                        track.title ?? track.language ?? 'Track $index',
-                        style: TextStyle(color: Colors.white)),
-                    leading: track == current
-                        ? Icon(Icons.check, color: Colors.orange)
-                        : null,
-                    onTap: () {
-                      _videoService.setSubtitleTrack(track);
-                      Navigator.pop(context);
-                    },
-                  );
-                }),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.file_open, color: Colors.white),
+                  title: const Text('Load from Device',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _loadExternalSubtitle();
+                  },
+                ),
+                const Divider(color: Colors.white24),
+                Expanded(
+                  child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: tracks.length,
+                      itemBuilder: (context, index) {
+                        final track = tracks[index];
+                        return ListTile(
+                          title: Text(
+                              track.title ?? track.language ?? 'Track $index',
+                              style: const TextStyle(color: Colors.white)),
+                          leading: track == current
+                              ? const Icon(Icons.check, color: Colors.orange)
+                              : null,
+                          onTap: () {
+                            _videoService.setSubtitleTrack(track);
+                            Navigator.pop(context);
+                          },
+                        );
+                      }),
+                ),
+              ],
+            ),
           );
         });
+  }
+
+  // --- Aspect Ratio ---
+  void _toggleAspectRatio() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        color: Colors.grey[900],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFitOption('Fit', BoxFit.contain),
+            _buildFitOption('Fill', BoxFit.cover),
+            _buildFitOption('Stretch', BoxFit.fill),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFitOption(String label, BoxFit fit) {
+    return ListTile(
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      leading: _videoFit == fit
+          ? const Icon(Icons.check, color: Colors.orange)
+          : null,
+      onTap: () {
+        setState(() => _videoFit = fit);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  // --- Orientation Lock ---
+  void _toggleOrientationLock() {
+    setState(() {
+      _isOrientationLocked = !_isOrientationLocked;
+    });
+
+    if (_isOrientationLocked) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+  }
+
+  // --- More Options ---
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.speed, color: Colors.white),
+                  title: const Text('Playback Speed',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showSpeedDialog();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline, color: Colors.white),
+                  title: const Text('Video Information',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showInfoDialog();
+                  },
+                ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.bookmark_border, color: Colors.white),
+                  title: const Text('Bookmark',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Save bookmark
+                  },
+                ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.picture_in_picture, color: Colors.white),
+                  title: const Text('Pop-up Player',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: PiP logic
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.lock, color: Colors.white),
+                  title: const Text('Lock Controls',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() => _isLocked = true);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSpeedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Playback Speed'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [0.5, 1.0, 1.25, 1.5, 2.0]
+              .map((s) => ListTile(
+                    title: Text('${s}x'),
+                    leading: _videoService.player.state.rate == s
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () {
+                      _videoService.player.setRate(s);
+                      Navigator.pop(context);
+                    },
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Video Information'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Title: ${widget.title}'),
+            Text('Duration: ${_formatDuration(_duration)}'),
+            Text('Format: ${path.extension(widget.videoFile.path)}'),
+            Text('Path: ${widget.videoFile.path}'),
+          ],
+        ),
+      ),
+    );
   }
 
   // --- Gestures ---
@@ -245,7 +548,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             child: InteractiveViewer(
               minScale: 1.0,
               maxScale: 4.0,
-              child: Video(controller: _videoService.controller),
+              child: Video(
+                controller: _videoService.controller,
+                fit: _videoFit,
+              ),
             ),
           ),
 
@@ -334,7 +640,38 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ),
             ),
 
-          // 4. Controls Layer
+          // 4. Resume Toast
+          if (_showResumeToast && _resumedPosition != null)
+            Positioned(
+              bottom: 120,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.history, color: Colors.orange, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Resumed from ${_formatDuration(_resumedPosition!)}',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // 5. Controls Layer
           if (_showControls && !_isDragging)
             IgnorePointer(
               ignoring: _isLocked,
@@ -345,7 +682,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   children: [
                     // Top Bar
                     Container(
-                      height: 100,
+                      height: 120,
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -447,6 +784,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             onTap: () {
                               if (_isPlaying) {
                                 _videoService.player.pause();
+                                if (_videoService.currentFile != null) {
+                                  _videoService.savePosition(
+                                      _videoService.currentFile!.path,
+                                      _videoService.player.state.position);
+                                }
                               } else {
                                 _videoService.player.play();
                               }
@@ -520,13 +862,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                       child: Slider(
                                         value: _position.inSeconds
                                             .toDouble()
-                                            .clamp(0.0,
-                                                _duration.inSeconds.toDouble()),
+                                            .clamp(
+                                                0.0,
+                                                _duration.inSeconds > 0
+                                                    ? _duration.inSeconds
+                                                        .toDouble()
+                                                    : 1.0),
                                         min: 0,
-                                        max: _duration.inSeconds.toDouble(),
+                                        max: _duration.inSeconds > 0
+                                            ? _duration.inSeconds.toDouble()
+                                            : 1.0,
                                         onChanged: (val) {
-                                          _videoService.player.seek(
-                                              Duration(seconds: val.toInt()));
+                                          if (_duration.inSeconds > 0) {
+                                            _videoService.player.seek(
+                                                Duration(seconds: val.toInt()));
+                                          }
                                         },
                                       ),
                                     ),
@@ -548,18 +898,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.lock_open,
+                                        icon: Icon(
+                                            _isOrientationLocked
+                                                ? Icons.screen_lock_landscape
+                                                : Icons.screen_rotation,
                                             color: Colors.white),
-                                        onPressed: () {
-                                          setState(() => _isLocked = true);
-                                        },
+                                        onPressed: _toggleOrientationLock,
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.aspect_ratio,
                                             color: Colors.white),
-                                        onPressed: () {
-                                          // Toggle fit
-                                        },
+                                        onPressed: _toggleAspectRatio,
                                       ),
                                     ],
                                   ),
@@ -574,7 +923,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                       IconButton(
                                         icon: const Icon(Icons.more_horiz,
                                             color: Colors.white),
-                                        onPressed: () {},
+                                        onPressed: _showMoreOptions,
                                       ),
                                     ],
                                   )

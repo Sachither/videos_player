@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "589887508412",
+    "firebase_url": "https://wecinema-fe12c-default-rtdb.firebaseio.com",
+    "project_id": "wecinema-fe12c",
+    "storage_bucket": "wecinema-fe12c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:589887508412:android:f3d4eefb642dd10a6ba5b9",
+        "android_client_info": {
+          "package_name": "com.wecinema"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "589887508412-2pqvla87aga7gma8qpg21vif2op5v5m7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.wecinema",
+            "certificate_hash": "16211ebd60c4d924417f830f7873833306d19888"
+          }
+        },
+        {
+          "client_id": "589887508412-9bio7c8lph22mq44hf8m52o4vjd5mhsl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBL3lf0O1KOpiTy4xRxbvAW29rCV1UENy4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "589887508412-9bio7c8lph22mq44hf8m52o4vjd5mhsl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
