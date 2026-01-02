@@ -103,6 +103,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return CTAScreen(
         onGuestStart: _onGuestStart,
         onSignUpLogin: _onSignUpLogin,
+        onMaybeLater: () {
+          // Fallback to guest start for now
+          _onGuestStart();
+        },
       );
     }
 

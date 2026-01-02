@@ -1,28 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/app_colors.dart';
 
 class RoomSummaryScreen extends StatelessWidget {
+  final String movieTitle;
+  final String moviePoster;
+  final String durationWatched;
+  final List<String> participants;
   final VoidCallback onReturnHome;
-  final VoidCallback onReportIssue;
 
   const RoomSummaryScreen({
     super.key,
+    required this.movieTitle,
+    required this.moviePoster,
+    required this.durationWatched,
+    this.participants = const [],
     required this.onReturnHome,
-    required this.onReportIssue,
   });
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var isDark = theme.brightness == Brightness.dark;
+    const primaryYellow = Color(0xFFF9F506);
+    const backgroundDark = Color(0xFF23220F);
+    const surfaceDark = Color(0xFF2E2D1A);
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: backgroundDark,
       body: Stack(
         children: [
-          // Background Glow
+          // Background Glow Pattern
           Positioned(
             top: 0,
             left: 0,
@@ -31,10 +36,10 @@ class RoomSummaryScreen extends StatelessWidget {
               height: 400,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0, -0.8),
-                  radius: 0.8,
+                  center: const Alignment(0, -1.0),
+                  radius: 1.2,
                   colors: [
-                    AppColors.primaryLight.withOpacity(0.05),
+                    primaryYellow.withOpacity(0.1),
                     Colors.transparent,
                   ],
                 ),
@@ -42,299 +47,248 @@ class RoomSummaryScreen extends StatelessWidget {
             ),
           ),
 
-          SafeArea(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 32),
-
-                  // Header
-                  Container(
-                    width: 64,
-                    height: 64,
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.check_circle,
-                          size: 36, color: AppColors.primaryLight),
-                    ),
-                  ),
-                  Text(
-                    'Room Ended',
-                    style: GoogleFonts.splineSans(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF181811),
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'The host has closed the session.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.splineSans(
-                      fontSize: 16,
-                      color: isDark ? Colors.white54 : Colors.grey.shade600,
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // Recap Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2E2D1A) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+          Positioned.fill(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  children: [
+                    // Header Section
+                    const SizedBox(height: 20),
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: primaryYellow.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.check_circle,
+                          color: primaryYellow,
+                          size: 40,
                         ),
-                      ],
-                      border: Border.all(
-                          color: isDark
-                              ? Colors.white10
-                              : Colors.black.withOpacity(0.05)),
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Movie Section
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppColors.backgroundDark
-                                : AppColors.backgroundLight,
-                            borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Room Ended',
+                      style: GoogleFonts.splineSans(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'The host has closed the session.',
+                      style: GoogleFonts.splineSans(
+                        fontSize: 16,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+
+                    const SizedBox(height: 48),
+
+                    // Recap Card
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: surfaceDark,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
                           ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Inner Card (Movie Info)
+                          Container(
+                            margin: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: backgroundDark,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'WATCHED',
+                                        style: GoogleFonts.splineSans(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryYellow,
+                                          letterSpacing: 2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        movieTitle,
+                                        style: GoogleFonts.splineSans(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.schedule,
+                                              size: 16,
+                                              color: Color(0xFFBBBA9B)),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            durationWatched,
+                                            style: GoogleFonts.splineSans(
+                                              fontSize: 14,
+                                              color: const Color(0xFFBBBA9B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Container(
+                                  width: 80,
+                                  height: 110,
+                                  decoration: BoxDecoration(
+                                    color: surfaceDark,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.4),
+                                        blurRadius: 10,
+                                      )
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: moviePoster.contains('http')
+                                        ? Image.network(
+                                            moviePoster,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    _buildPosterFallback(
+                                                        primaryYellow),
+                                            loadingBuilder:
+                                                (context, child, progress) {
+                                              if (progress == null)
+                                                return child;
+                                              return Center(
+                                                child: SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                                Color>(
+                                                            primaryYellow
+                                                                .withOpacity(
+                                                                    0.5)),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : _buildPosterFallback(primaryYellow),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Divider
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Divider(
+                                color: Colors.white.withOpacity(0.05),
+                                height: 1),
+                          ),
+
+                          // Lower section (Participants & Rate)
+                          Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'WATCHED',
+                                      'WITH FRIENDS',
                                       style: GoogleFonts.splineSans(
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: AppColors.primaryLight,
-                                        letterSpacing: 1.5,
+                                        color: Colors.white.withOpacity(0.3),
+                                        letterSpacing: 1.2,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Interstellar: Director's Cut",
-                                      style: GoogleFonts.splineSans(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? Colors.white
-                                            : const Color(0xFF181811),
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.schedule,
-                                          size: 14,
-                                          color: isDark
-                                              ? const Color(0xFFBBBA9B)
-                                              : Colors.grey.shade600,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '2hr 49min watched',
-                                          style: GoogleFonts.splineSans(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? const Color(0xFFBBBA9B)
-                                                : Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildAvatarStack(participants),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              Container(
-                                width: 80,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  image: const DecorationImage(
-                                    image: NetworkImage(
-                                        'https://lh3.googleusercontent.com/aida-public/AB6AXuANMhURGD2Au7cytwks6rLCs6WoRzbwd998rgdJjGBjslsIyS7N5HrqAmm3l_DUOMIbC26Iz-lJ2R6Qhan2N_VvekJEGsDuAec5rXmlb0TtckBJ9Cml-oYN2l3Dq1EPARw0sUu4xrJfFw3NDqHmb2a_p7jzZq9IEXBihsx-VaMbW6dJR4s-xUg78gFuEqPgB8Jz1lJUiBXwImPYyOODRykfUXEq5xgv-uD5lkZpJ3vz0cLiTq0dvIgWc_mRTOHDBtrdmeXs1f-CTJe0'),
-                                    fit: BoxFit.cover,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                _buildRateButton(),
+                              ],
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 60),
+
+                    // Bottom Buttons
+                    Column(
+                      children: [
+                        _buildPrimaryButton(
+                          text: 'Return to Home',
+                          onPressed: onReturnHome,
+                          color: primaryYellow,
                         ),
-
-                        // Interaction Section
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'WITH FRIENDS',
-                                    style: GoogleFonts.splineSans(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark
-                                          ? Colors.white38
-                                          : Colors.black38,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    height: 32,
-                                    child: Stack(
-                                      children: [
-                                        _buildAvatar(0),
-                                        Positioned(
-                                            left: 24, child: _buildAvatar(1)),
-                                        Positioned(
-                                            left: 48, child: _buildAvatar(2)),
-                                        Positioned(
-                                          left: 72,
-                                          child: Container(
-                                            width: 32,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.white10
-                                                  : Colors.grey.shade200,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color: isDark
-                                                      ? const Color(0xFF2E2D1A)
-                                                      : Colors.white,
-                                                  width: 2),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                '+2',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isDark
-                                                      ? Colors.white54
-                                                      : Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                ],
-                              ),
-
-                              // Rate Button
-                              Container(
-                                height: 36,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppColors.primaryLight.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(18),
+                        const SizedBox(height: 16),
+                        Builder(
+                          builder: (context) => TextButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Thank you for your report. Our team has been notified.'),
+                                  backgroundColor: surfaceDark,
                                 ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.star,
-                                        size: 16,
-                                        color: AppColors.primaryLight),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Rate',
-                                      style: GoogleFonts.splineSans(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primaryLight,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              );
+                            },
+                            child: Text(
+                              'Report an issue',
+                              style: GoogleFonts.splineSans(
+                                color: Colors.grey.shade500,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  const Spacer(),
-
-                  // Return Home Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: onReturnHome,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
-                        foregroundColor: AppColors.backgroundDark,
-                        elevation: 0,
-                        shadowColor: AppColors.primaryLight.withOpacity(0.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                      ),
-                      child: Text(
-                        'Return to Home',
-                        style: GoogleFonts.splineSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Report
-                  TextButton(
-                    onPressed: onReportIssue,
-                    child: Text(
-                      'Report an issue',
-                      style: GoogleFonts.splineSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.grey : Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -343,15 +297,151 @@ class RoomSummaryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(int index) {
-    // Placeholder avatars
+  Widget _buildPosterFallback(Color accentColor) {
     return Container(
-      width: 32,
-      height: 32,
       decoration: BoxDecoration(
-        color: Colors.grey.shade800,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.backgroundDark, width: 2),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accentColor.withOpacity(0.2),
+            accentColor.withOpacity(0.05),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.movie_creation_outlined,
+          color: accentColor.withOpacity(0.5),
+          size: 32,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarStack(List<String> participants) {
+    // Limited display to 3 + count for aesthetics
+    final displayCount = participants.length > 3 ? 3 : participants.length;
+    return SizedBox(
+      height: 36,
+      width: participants.isEmpty ? 150 : (displayCount * 24.0 + 12.0),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (int i = 0;
+              i < (participants.length > 3 ? 3 : participants.length);
+              i++)
+            Positioned(
+              left: i * 24.0,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey.shade800,
+                  border: Border.all(color: const Color(0xFF2E2D1A), width: 3),
+                ),
+                child: const Center(
+                  child: Icon(Icons.person, color: Colors.white30, size: 20),
+                ),
+              ),
+            ),
+          if (participants.length > 3)
+            Positioned(
+              left: 72,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey.shade700,
+                  border: Border.all(color: const Color(0xFF2E2D1A), width: 3),
+                ),
+                child: Center(
+                  child: Text(
+                    '+${participants.length - 3}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (participants.isEmpty)
+            const Positioned(
+              left: 0,
+              top: 10,
+              child: Text('Solo viewing session',
+                  style: TextStyle(color: Colors.white24, fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRateButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F506).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star, color: Color(0xFFF9F506), size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'Rate',
+            style: GoogleFonts.splineSans(
+              color: const Color(0xFFF9F506),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton({
+    required String text,
+    required VoidCallback onPressed,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.splineSans(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
       ),
     );
   }

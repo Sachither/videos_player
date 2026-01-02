@@ -74,6 +74,7 @@ class _RoomLobbySheetState extends State<RoomLobbySheet> {
                         movieId: widget.movieId,
                         videoUrl: videoUrl,
                         roomId: widget.roomId,
+                        isHost: _isHost,
                       )));
         }
       }

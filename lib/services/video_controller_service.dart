@@ -16,8 +16,22 @@ class VideoControllerService {
   int _currentIndex = -1;
 
   VideoControllerService() {
-    player = Player();
+    player = Player(
+      configuration: const PlayerConfiguration(
+        bufferSize: 300 * 1024 * 1024, // 300MB
+      ),
+    );
+    _setAggressiveCaching();
     controller = VideoController(player);
+  }
+
+  Future<void> _setAggressiveCaching() async {
+    if (player.platform is NativePlayer) {
+      final native = player.platform as NativePlayer;
+      await native.setProperty('demuxer-max-bytes', '300000000'); // 300MB
+      await native.setProperty('demuxer-max-back-bytes', '50000000'); // 50MB
+      await native.setProperty('cache-secs', '300'); // 5 minutes readahead
+    }
   }
 
   Future<void> initialize(File file) async {

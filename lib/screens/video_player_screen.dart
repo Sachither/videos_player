@@ -10,16 +10,23 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
+import '../constants/app_colors.dart';
 import '../services/video_controller_service.dart';
+import '../models/video_model.dart' as model;
+import 'room/room_setup_sheet.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final File videoFile;
   final String title;
+  final List<model.Video> allVideos;
+  final model.Video? video; // The current video object
 
   const VideoPlayerScreen({
     super.key,
     required this.videoFile,
     required this.title,
+    this.allVideos = const [],
+    this.video,
   });
 
   @override
@@ -29,6 +36,7 @@ class VideoPlayerScreen extends StatefulWidget {
 class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     with WidgetsBindingObserver {
   late VideoControllerService _videoService;
+  model.Video? _currentVideo;
 
   bool _showControls = true;
   Timer? _hideControlsTimer;
@@ -68,6 +76,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     _videoService = VideoControllerService();
+    _currentVideo = widget.video;
 
     // Sync initial state if available
     _position = _videoService.player.state.position;
@@ -221,12 +230,52 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   // --- Next / Prev ---
   Future<void> _playNext() async {
     await _videoService.playNext();
+    _updateCurrentVideo();
     setState(() {});
   }
 
   Future<void> _playPrev() async {
     await _videoService.playPrevious();
+    _updateCurrentVideo();
     setState(() {});
+  }
+
+  void _updateCurrentVideo() {
+    if (_videoService.currentFile != null) {
+      final currentPath = _videoService.currentFile!.path;
+      try {
+        // Try to find the matching Video object in the library
+        // We might need to compare by filename or path depending on how Video model stores it
+        // Assumed: Video assets can provide file paths eventually or we match by title
+        final fileName = path.basename(currentPath);
+        final found = widget.allVideos.firstWhere(
+          (v) => v.title == fileName || currentPath.endsWith(v.title),
+          orElse: () => _currentVideo!,
+        );
+        setState(() => _currentVideo = found);
+      } catch (_) {}
+    }
+  }
+
+  void _showRoomSetupSheet() {
+    if (_currentVideo == null) return;
+
+    // Pause video while setting up
+    _videoService.player.pause();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RoomSetupSheet(
+        videos: widget.allVideos,
+        initialVideo: _currentVideo,
+        onCancel: () {
+          Navigator.pop(context);
+          _videoService.player.play();
+        },
+      ),
+    );
   }
 
   // --- Subtitles ---
@@ -729,13 +778,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                               // Start Room Button (Responsive)
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.orange,
+                                  color: AppColors.primaryLight,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: InkWell(
-                                  onTap: () {
-                                    // Start Room Action
-                                  },
+                                  onTap: _showRoomSetupSheet,
                                   borderRadius: BorderRadius.circular(20),
                                   child: Padding(
                                     padding: EdgeInsets.symmetric(
@@ -745,13 +792,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                                     child: Row(
                                       children: [
                                         const Icon(Icons.screen_share,
-                                            size: 20, color: Colors.white),
+                                            size: 20, color: Colors.black),
                                         if (isLandscape) ...[
                                           const SizedBox(width: 8),
                                           Text(
                                             "Start Room",
                                             style: GoogleFonts.splineSans(
-                                              color: Colors.white,
+                                              color: Colors.black,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
                                             ),

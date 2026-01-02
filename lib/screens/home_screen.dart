@@ -6,7 +6,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import 'video_player_screen.dart';
-import 'room_view.dart';
+import 'package:wecinema/screens/room_view.dart';
 import 'package:wecinema/models/video_model.dart';
 import 'package:wecinema/screens/room/room_setup_sheet.dart';
 import 'package:wecinema/widgets/video_thumbnail_widget.dart';
@@ -603,6 +603,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   VideoPlayerScreen(
                                                 videoFile: file,
                                                 title: video.title,
+                                                video: video,
+                                                allVideos: videos,
                                               ),
                                             ),
                                           );

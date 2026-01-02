@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_manager.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -11,6 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   MediaKit.ensureInitialized();
+  await ThemeManager().init();
   final prefs = await SharedPreferences.getInstance();
   final bool isOnboardingComplete =
       prefs.getBool('isOnboardingComplete') ?? false;
@@ -28,14 +30,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WeCinema',
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
-      themeMode: ThemeMode.light,
-      debugShowCheckedModeBanner: false,
-      home:
-          isOnboardingComplete ? const HomeScreen() : const OnboardingScreen(),
+    return ListenableBuilder(
+      listenable: ThemeManager(),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'WeCinema',
+          theme: AppTheme.lightTheme(),
+          darkTheme: AppTheme.darkTheme(),
+          themeMode: ThemeManager().themeMode,
+          debugShowCheckedModeBanner: false,
+          home: isOnboardingComplete
+              ? const HomeScreen()
+              : const OnboardingScreen(),
+        );
+      },
     );
   }
 }

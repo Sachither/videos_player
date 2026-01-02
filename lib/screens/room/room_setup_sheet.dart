@@ -13,11 +13,13 @@ import 'room_lobby_sheet.dart';
 
 class RoomSetupSheet extends StatefulWidget {
   final List<Video> videos;
+  final Video? initialVideo;
   final VoidCallback onCancel;
 
   const RoomSetupSheet({
     super.key,
     required this.videos,
+    this.initialVideo,
     required this.onCancel,
   });
 
@@ -30,6 +32,15 @@ class _RoomSetupSheetState extends State<RoomSetupSheet> {
   Video? _selectedVideo;
   final TextEditingController _linkController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialVideo != null) {
+      _selectedVideo = widget.initialVideo;
+      _currentStep = 2;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -400,11 +411,17 @@ class _RoomSetupSheetState extends State<RoomSetupSheet> {
         throw Exception('Invalid Google Drive link format');
       }
 
-      // 3. Create Room in Firebase
+      // 3. Generate Thumbnail URL (Improvised but beautiful)
+      final posterUrl = fileId.isNotEmpty
+          ? 'https://drive.google.com/thumbnail?id=$fileId&sz=w800'
+          : null;
+
+      // 4. Create Room in Firebase
       final roomId = await RoomService().createRoom(
         fileId: fileId,
         fileName: _selectedVideo!.title,
         videoUrl: link, // The actual share link
+        posterUrl: posterUrl,
         isDriveFile: true,
       );
 

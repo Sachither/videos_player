@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
+import '../theme/theme_manager.dart';
 
 class SettingsView extends StatefulWidget {
   final bool isDark;
@@ -47,7 +48,10 @@ class _SettingsViewState extends State<SettingsView> {
                         icon: Icons.dark_mode_outlined,
                         title: 'Dark Mode',
                         value: _isDarkMode,
-                        onChanged: (val) => setState(() => _isDarkMode = val),
+                        onChanged: (val) {
+                          setState(() => _isDarkMode = val);
+                          ThemeManager().toggleTheme(val);
+                        },
                         isLast: true,
                       ),
                     ]),

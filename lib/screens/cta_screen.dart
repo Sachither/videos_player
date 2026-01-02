@@ -3,44 +3,50 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import 'permissions_screen.dart';
 
+import '../services/auth_service.dart';
+
 class CTAScreen extends StatelessWidget {
   final VoidCallback onGuestStart;
   final VoidCallback onSignUpLogin;
+  final VoidCallback onMaybeLater;
 
   const CTAScreen({
     super.key,
     required this.onGuestStart,
     required this.onSignUpLogin,
+    required this.onMaybeLater,
   });
 
   void _handleGuestStart(BuildContext context) {
+    // 🪄 Trigger anonymous auth in background as requested
+    // (RoomService also does this, but it's good to have it ready)
+    AuthService().signInAnonymously();
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PermissionsScreen(
-          onGrantPermissions: () {
-            // TODO: Navigate to home screen
-          },
-          onMaybeLater: () {
-            // TODO: Navigate to home screen or stay on permissions
-          },
+          onGrantPermissions: onGuestStart,
+          onMaybeLater: onMaybeLater,
+        ),
+      ),
+    );
+  }
+
+  void _handleSignUpLogin(BuildContext context) {
+    // For now, this also goes to permissions for simplicity/MVP consistency
+    // but we can distinguish it later for Google Sign-In
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PermissionsScreen(
+          onGrantPermissions: onSignUpLogin,
+          onMaybeLater: onMaybeLater,
         ),
       ),
     );
   }
 
   void _handleSkip(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PermissionsScreen(
-          onGrantPermissions: () {
-            // TODO: Navigate to home screen
-          },
-          onMaybeLater: () {
-            // TODO: Navigate to home screen or stay on permissions
-          },
-        ),
-      ),
-    );
+    _handleGuestStart(context);
   }
 
   @override
@@ -209,7 +215,7 @@ class CTAScreen extends StatelessWidget {
                             ? Colors.white.withOpacity(0.05)
                             : Colors.white,
                       ),
-                      onPressed: () => _handleGuestStart(context),
+                      onPressed: () => _handleSignUpLogin(context),
                       child: Text(
                         'Sign up/Login to get started',
                         style: GoogleFonts.splineSans(
